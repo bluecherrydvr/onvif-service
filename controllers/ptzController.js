@@ -1,18 +1,18 @@
 const { OnvifDevice, Media, PTZ } = require('node-onvif');
 
-const cameraConfig = {
-    xaddr: 'http://your-camera-ip/onvif/device_service',
-    user: 'your-username',
-    pass: 'your-password',
-};
+// const cameraConfig = {
+//     xaddr: 'http://your-camera-ip/onvif/device_service',
+//     user: 'your-username',
+//     pass: 'your-password',
+// };
 
-const camera = new OnvifDevice(cameraConfig);
+// const camera = new OnvifDevice(cameraConfig);
 
-camera.init().then(() => {
-    console.log('Camera initialized');
-}).catch(err => {
-    console.error('Error initializing camera:', err);
-});
+// camera.init().then(() => {
+//     console.log('Camera initialized');
+// }).catch(err => {
+//     console.error('Error initializing camera:', err);
+// });
 
 function sendPTZCommand(req, res) {
     const { command } = req.body;

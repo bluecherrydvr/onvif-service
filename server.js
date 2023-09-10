@@ -3,15 +3,17 @@ const bodyParser = require('body-parser');
 const onvifSubscriptionRoutes = require('./routes/onvifSubscriptionRoutes');
 const deviceRoutes = require('./routes/deviceRoutes');
 const ptzRoutes = require('./routes/ptzRoutes');
-
-
+const deviceController = require('./controllers/deviceController');
 const app = express();
+
 app.use(bodyParser.json());
 
 // Use ONVIF subscription routes
 app.use('/api', deviceRoutes);
 app.use('/api', onvifSubscriptionRoutes);
 app.use('/api', ptzRoutes);
+
+deviceController.setCachedDevices();
 
 const PORT = process.env.PORT || 3000;
 app.listen(PORT, () => {
