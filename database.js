@@ -1,7 +1,6 @@
 // controllers/deviceController.js
 require('dotenv').config();
-const Memcached = require('memcached');
-const memcached = new Memcached('localhost:11211'); // Replace with your Memcached server configuration
+const deviceController = require('./controllers/deviceController');
 const mysql = require('mysql2');
 const pool = mysql.createPool({
     host: process.env.DB_HOST,
@@ -12,39 +11,54 @@ const pool = mysql.createPool({
 
 
 // Function to fetch devices from the cache
-function getCachedDevices(callback) {
-    memcached.get('allDevices', (err, data) => {
-        if (err) {
-            console.error('Memcached error:', err);
-            callback(err, null);
-        } else {
-            callback(null, data);
-        }
-    });
-}
 
-// Function to set devices in the cache
-function setCachedDevices(devices, callback) {
-    memcached.set('allDevices', devices, 3600, (cacheErr) => {
-        if (cacheErr) {
-            console.error('Memcached set error:', cacheErr);
-            callback(cacheErr);
-        } else {
-            callback(null);
-        }
-    });
-}
 
 async function getAllDevices(callback) {
     // Attempt to fetch devices from the cache
-    getCachedDevices(async (err, cachedDevices) => {
+    console.log('trying to get devices ')
+    deviceController.getCachedDevices(async (err, cachedDevices) => {
         if (err || !cachedDevices) {
             try {
                 // Fetch devices from the database using the getDevices function from database.js
-                const devices = await pool.query('SELECT * FROM devices')
+                // @todo use real data from database
+                // const devices = await pool.query('SELECT * FROM devices')
+
+                const devices = [
+                    {
+                        "ip": "192.168.86.175",
+                        "login": "admin",
+                        "password": "camera123"
+                    },
+                    {
+                        "ip": "192.168.86.200",
+                        "login": "admin",
+                        "password": "admin123"
+                    },
+                    {
+                        "ip": "192.168.86.121",
+                        "login": "admin",
+                        "password": "admin123"
+                    },
+                    {
+                        "ip": "192.168.86.176",
+                        "login": "admin",
+                        "password": "camera123"
+                    },
+                    {
+                        "ip": "192.168.86.91",
+                        "login": "admin",
+                        "password": "admin123"
+                    },
+                    {
+                        "ip": "192.168.86.119",
+                        "login": "admin",
+                        "password": "admin"
+                    }
+                ]
+
 
                 // Cache the devices
-                setCachedDevices(devices, (cacheErr) => {
+                deviceController.setCachedDevices(devices, (cacheErr) => {
                     if (cacheErr) {
                         console.error('Error caching devices:', cacheErr);
                     }
