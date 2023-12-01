@@ -6,7 +6,12 @@ function createSubscription(deviceId) {
 
     return new Promise((resolve, reject) => {
         // Initialize the ONVIF client with the provided device configuration
-        deviceController.getCachedDevice(deviceId).then((data) => {
+        deviceController.getCachedDevice(deviceId).then((data2) => {
+            const data =         {
+                "ip": "192.168.86.89",
+                "login": "admin",
+                "password": "admin",
+            }
             // Create a new ONVIF camera object
             const cam = new onvif.Cam({
                 hostname: data.ip,

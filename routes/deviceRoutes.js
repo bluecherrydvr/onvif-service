@@ -12,25 +12,35 @@ const memcached = new Memcached('localhost:11211'); // Replace with your Memcach
 // GET all devices
 router.get('/read', (req, res) => {
     const key = 'devices'; // The key under which the data is stored in Memcached
+    const devices = [
+        {
+            "ip": "192.168.86.89",
+            "login": "admin",
+            "password": "admin",
+            "path" : "/onvifsnapshot/media_service/snapshot?channel=1&subtype=0"
+        },
 
+    ]
+    console.log('Retrieved JSON data from Memcached:', devices);
+    res.status(200).json(devices); 
     // Retrieve the JSON array from Memcached
-    memcached.get(key, (err, data) => {
-        if (err) {
-            console.error('Error retrieving data from Memcached:', err);
-            res.status(500).json({ error: 'Error retrieving data from Memcached' });
-        } else {
-            if (data) {
-                // Data exists in Memcached
-                const jsonData = data; // Parse the JSON data
-                console.log('Retrieved JSON data from Memcached:', jsonData);
-                res.status(200).json(jsonData); // Return the JSON data as the API response
-            } else {
-                // Data does not exist in Memcached
-                console.log('Data not found in Memcached');
-                res.status(404).json({ error: 'Data not found in Memcached' });
-            }
-        }
-    });
+    // memcached.get(key, (err, data) => {
+    //     if (err) {
+    //         console.error('Error retrieving data from Memcached:', err);
+    //         res.status(500).json({ error: 'Error retrieving data from Memcached' });
+    //     } else {
+    //         if (data) {
+    //             // Data exists in Memcached
+    //             const jsonData = data; // Parse the JSON data
+    //             console.log('Retrieved JSON data from Memcached:', jsonData);
+    //             res.status(200).json(jsonData); // Return the JSON data as the API response
+    //         } else {
+    //             // Data does not exist in Memcached
+    //             console.log('Data not found in Memcached');
+    //             res.status(404).json({ error: 'Data not found in Memcached' });
+    //         }
+    //     }
+    // });
 });
 
 router.post('/set', (req, res) => {
@@ -57,7 +67,7 @@ router.post('/set', (req, res) => {
             "password": "camera123"
         },
         {
-            "ip": "192.168.86.91",
+            "ip": "192.168.86.89",
             "login": "admin",
             "password": "admin123"
         },
@@ -67,6 +77,7 @@ router.post('/set', (req, res) => {
             "password": "admin"
         }
     ]
+    console.log('?')
 
     // Store the JSON array in Memcached with a specified expiration time (e.g., 1 hour)
     memcached.set(key, devices, 3600, (err) => {

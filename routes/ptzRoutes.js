@@ -1,19 +1,17 @@
 const express = require('express');
 const router = express.Router();
 const ptzController = require('../controllers/ptzController');
-const deviceController = require('../controllers/deviceController');
-
-// Define a route for receiving and handling arrow key commands
 
 router.post('/ptz', async (req, res) => {
     try {
-        const result = await ptzController.sendPTZCommand;
-        res.status(200).json({ message: result });
+        const deviceId = req.body.deviceId;
+        const ptzCommand = req.body.command;
+        console.log(deviceId, ptzCommand);
+        ptzController.sendPTZCommand(deviceId, ptzCommand, res);
     } catch (error) {
+        // Only send a response here if there's an error before sendPTZCommand is called
         res.status(500).json({ error: error.message });
     }
-
 });
-
 
 module.exports = router;

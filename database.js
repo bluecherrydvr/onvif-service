@@ -45,7 +45,7 @@ async function getAllDevices(callback) {
                         "password": "camera123"
                     },
                     {
-                        "ip": "192.168.86.91",
+                        "ip": "192.168.86.89",
                         "login": "admin",
                         "password": "admin123"
                     },

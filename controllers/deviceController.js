@@ -34,9 +34,9 @@ function setCachedDevices() {
     const cachedDevices = [
         {
             "id": 1,
-            "ip": "192.168.86.175",
+            "ip": "192.168.86.89",
             "login": "admin",
-            "password": "camera123"
+            "password": "admin"
         },
         {
             "id": 2,
@@ -58,7 +58,7 @@ function setCachedDevices() {
         },
         {
             "id": 5,
-            "ip": "192.168.86.91",
+            "ip": "192.168.86.89",
             "login": "admin",
             "password": "admin123"
         },

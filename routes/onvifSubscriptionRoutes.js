@@ -7,7 +7,7 @@ const subscriptionController = require('../controllers/subscriptionController');
 router.post('/subscribe', async (req, res) => {
     try {
         const { id } = req.body
-        console.log()
+        console.log( id )
         const result = await subscriptionController.createSubscription(id);
         res.status(200).json({ message: result });
     } catch (error) {
