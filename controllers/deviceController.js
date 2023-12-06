@@ -1,6 +1,6 @@
 const Memcached = require('memcached');
 const memcached = new Memcached('localhost:11211'); // Replace with your Memcached server configuration
-const db = require('../database'); // Import the database.js module
+const db = require('./databaseController'); // Import the databaseController.js module
 
 // Function to fetch devices from the cache
 function getCachedDevices(callback) {

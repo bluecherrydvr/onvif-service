@@ -5,7 +5,7 @@ const deviceRoutes = require('./routes/deviceRoutes');
 const ptzRoutes = require('./routes/ptzRoutes');
 const deviceController = require('./controllers/deviceController');
 const app = express();
-
+app.use(express.json());
 app.use(bodyParser.json());
 
 // Use ONVIF subscription routes
