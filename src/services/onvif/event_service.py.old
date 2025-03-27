@@ -1,0 +1,227 @@
+#!/usr/bin/env python3
+
+import os
+import sys
+import json
+import time
+import logging
+import requests
+from datetime import datetime, timedelta
+from typing import Dict, Any, Optional
+
+from onvif import ONVIFCamera, ONVIFError
+from zeep import helpers
+from zeep.exceptions import Fault, TransportError
+
+# Configure logging
+logging.basicConfig(
+    level=logging.INFO,
+    format='%(asctime)s - %(name)s - %(levelname)s - %(message)s'
+)
+logger = logging.getLogger(__name__)
+
+class OnvifEventService:
+    def __init__(self, host: str, port: int, user: str, pwd: str):
+        self.camera = ONVIFCamera(host, port, user, pwd)
+        self.events = self.camera.create_events_service()
+        
+    def create_pull_point(self):
+        """Create event pull point subscription"""
+        try:
+            # Create pull point subscription
+            response = self.events.CreatePullPointSubscription()
+            
+            # Get the subscription reference
+            subscription_reference = response.SubscriptionReference.Address._value_1
+            
+            # Create pull point subscription service
+            pull_point = self.camera.create_pullpoint_service(subscription_reference)
+            return pull_point
+            
+        except Exception as e:
+            raise Exception(f"Failed to create pull point: {str(e)}")
+            
+    def pull_messages(self, pull_point, timeout: str = 'PT5S'):
+        """Pull messages from subscription"""
+        try:
+            return pull_point.PullMessages({
+                'Timeout': timeout,
+                'MessageLimit': 100
+            })
+        except Exception as e:
+            raise Exception(f"Failed to pull messages: {str(e)}")
+
+    def get_event_properties(self) -> Dict:
+        """Get supported event properties from camera"""
+        try:
+            properties = self.events.GetEventProperties()
+            return zeep.helpers.serialize_object(properties)
+        except Exception as e:
+            raise Exception(f"Failed to get event properties: {str(e)}")
+            
+    def create_pull_point(self):
+        """Create event pull point subscription"""
+        try:
+            pull_point = self.events.CreatePullPointSubscription()
+            return pull_point
+        except Exception as e:
+            raise Exception(f"Failed to create pull point: {str(e)}")
+            
+    def pull_messages(self, pull_point, timeout: str = 'PT5S'):
+        """Pull messages from subscription"""
+        try:
+            return pull_point.PullMessages({
+                'Timeout': timeout,
+                'MessageLimit': 100
+            })
+        except Exception as e:
+            raise Exception(f"Failed to pull messages: {str(e)}")
+
+def initialize_camera(self) -> None:
+    """Initialize camera connection and create event service."""
+    try:
+        # Get path to WSDL directory
+        current_dir = os.path.dirname(os.path.abspath(__file__))
+        wsdl_dir = os.path.join(current_dir, 'wsdl')
+        
+        # Create symlink for schema directory if it doesn't exist
+        home_schema_dir = '/home/ver10/schema'
+        if not os.path.exists(home_schema_dir):
+            os.makedirs(os.path.dirname(home_schema_dir), exist_ok=True)
+            os.symlink(os.path.join(wsdl_dir, 'ver10', 'schema'), home_schema_dir)
+        
+        # Initialize camera with local WSDL directory
+        self.cam = ONVIFCamera(
+            self.host,
+            self.port,
+            self.user,
+            self.pwd,
+            wsdl_dir=wsdl_dir
+        )
+        
+        # Create events service
+        self.events = self.cam.create_events_service()
+        logger.info("Camera initialized successfully")
+        
+    except Exception as e:
+        raise Exception(f"Failed to initialize camera: {str(e)}")
+
+    def create_pull_point(self) -> None:
+        """Create pull point subscription."""
+        try:
+            self.pull_point = self.events.CreatePullPointSubscription({
+                'InitialTerminationTime': 'PT1H',  # 1 hour subscription
+                'Filter': {
+                    'TopicExpression': {
+                        'Dialect': 'http://www.onvif.org/ver10/tev/topicExpression/ConcreteSet',
+                    }
+                }
+            })
+            logger.info("Pull point subscription created successfully")
+            
+        except Exception as e:
+            raise Exception(f"Failed to create pull point: {str(e)}")
+
+    def should_renew(self, termination_time: str) -> bool:
+        """Check if subscription should be renewed."""
+        try:
+            term_time = datetime.fromisoformat(termination_time.replace('Z', '+00:00'))
+            time_until_termination = (term_time - datetime.now()).total_seconds()
+            return time_until_termination < 300  # Renew if less than 5 minutes remaining
+        except:
+            return True
+
+    def pull_messages(self, timeout: str = 'PT5S') -> Dict[str, Any]:
+        """Pull messages from subscription."""
+        try:
+            messages = self.pull_point.PullMessages({
+                'Timeout': timeout,
+                'MessageLimit': 100
+            })
+            
+            # Check if subscription needs renewal
+            if hasattr(messages, 'TerminationTime') and self.should_renew(messages.TerminationTime):
+                logger.info("Renewing pull point subscription")
+                self.create_pull_point()
+                
+            return helpers.serialize_object(messages)
+            
+        except (Fault, ONVIFError, TransportError) as e:
+            error_msg = str(e)
+            if isinstance(e, Fault):
+                error_msg = f"SOAP Fault: {e.message}"
+            elif isinstance(e, ONVIFError):
+                error_msg = f"ONVIF Error: {str(e)}"
+                
+            raise Exception(f"Failed to pull messages: {error_msg}")
+
+def parse_config(config_str: str) -> Dict[str, Any]:
+    """Parse JSON configuration string."""
+    try:
+        config = json.loads(config_str)
+        required = ['host', 'port', 'username', 'password']
+        
+        if not all(k in config for k in required):
+            raise ValueError(f"Missing required fields. Required: {required}")
+            
+        return config
+        
+    except json.JSONDecodeError:
+        raise ValueError("Invalid JSON configuration")
+
+def main():
+    """Main execution function."""
+    if len(sys.argv) != 3 or sys.argv[1] != 'subscribe':
+        print("Usage: ./event_service.py subscribe '<device_config_json>'")
+        sys.exit(1)
+        
+    try:
+        # Parse the JSON input from Node.js
+        config = json.loads(sys.argv[2])
+        
+        # Validate required fields
+        required_fields = ['host', 'port', 'username', 'password']
+        for field in required_fields:
+            if field not in config:
+                raise ValueError(f"Missing required field: {field}")
+        
+        # Initialize the ONVIF service
+        service = OnvifEventService(
+            host=config['host'],
+            port=config['port'],
+            user=config['username'],
+            pwd=config['password']
+        )
+        
+        # Create pull point subscription
+        pull_point = service.create_pull_point()
+        
+        while True:
+            try:
+                # Pass the pull_point to pull_messages
+                messages = service.pull_messages(pull_point)
+                print(json.dumps(zeep.helpers.serialize_object(messages)))
+                sys.stdout.flush()
+                time.sleep(1)
+                
+            except Exception as e:
+                logger.error(f"Error: {str(e)}")
+                time.sleep(5)
+                
+                # Try to recreate pull point if there's an error
+                try:
+                    pull_point = service.create_pull_point()
+                except Exception as e:
+                    logger.error(f"Failed to recreate pull point: {str(e)}")
+                
+    except KeyboardInterrupt:
+        logger.info("Shutting down")
+        sys.exit(0)
+    except Exception as e:
+        print(f"ERROR:__main__:Error: {str(e)}", file=sys.stderr)
+        sys.exit(1)
+
+if __name__ == "__main__":
+    main()
+
+

@@ -15,10 +15,13 @@ export class TriggerController {
 
             await OnvifEventHandler.triggerRecording(cameraId, description || 'Manual Trigger');
             res.status(200).send('OK');
-        } catch (error) {
+        } catch (error: unknown) {
             Server.Logs.error(`Trigger error: ${error}`);
-            res.status(500).send(`Server Error - ${error.message}`);
+            if (error instanceof Error) {
+                res.status(500).send(`Server Error - ${error.message}`);
+            } else {
+                res.status(500).send('Server Error - Unknown error occurred');
+            }
         }
     }
 }
-
