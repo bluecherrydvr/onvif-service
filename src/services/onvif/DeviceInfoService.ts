@@ -1,5 +1,6 @@
 import { Server } from '../../server';
-import { Devices } from '../../models/db/Device';
+import { Register as RegisterDevices, Devices } from '../../models/db/Device';
+
 
 export interface DeviceConnectionInfo {
   id: number;
@@ -17,6 +18,16 @@ export interface OnvifConfig {
 }
 
 export class DeviceInfoService {
+  // Ensure model is initialized
+  private static initialized = false;
+
+  private static init() {
+    if (!this.initialized) {
+      RegisterDevices();
+      this.initialized = true;
+    }
+  }
+
   private static decodeHexPassword(hexPassword: string | null | undefined): string {
     if (!hexPassword) return '';
     const hex = hexPassword.startsWith('0x') ? hexPassword.slice(2) : hexPassword;
@@ -29,6 +40,8 @@ export class DeviceInfoService {
 
   public static async getDeviceConnectionInfo(deviceId: number): Promise<DeviceConnectionInfo> {
     try {
+      this.init(); // ensure Devices model is initialized
+
       const device = await Devices.findOne({ where: { id: deviceId } });
       if (!device) throw new Error(`Device with ID ${deviceId} not found`);
 
@@ -44,29 +57,23 @@ export class DeviceInfoService {
         ipAddress: device.ip_address || '',
         onvifPort: device.onvif_port || 80,
         rtspUsername: device.rtsp_username || '',
-        rtspPassword: password
+        rtspPassword: device.rtsp_password
       };
-    } catch (error) {
-      Server.Logs.error(`Failed to get device connection info: ${error}`);
+    } catch (error: any) {
+      Server.Logs.error(`Failed to get device connection info: ${error.stack || error.message}`);
       throw error;
     }
   }
 
-  public static validateConnectionInfo(info: DeviceConnectionInfo): boolean {
-    Server.Logs.debug(`Full connection details for device ${info.id}:`, info);
-
-    const ipRegex = /^(?:(?:25[0-5]|2[0-4][0-9]|[01]?[0-9][0-9]?)\\.){3}(?:25[0-5]|2[0-4][0-9]|[01]?[0-9][0-9]?)$/;
-    if (!info.ipAddress || !ipRegex.test(info.ipAddress)) {
-      Server.Logs.error(`Device ${info.id} has invalid or missing IP: ${info.ipAddress}`);
-      return false;
-    }
-
-    if (!info.onvifPort || info.onvifPort <= 0 || info.onvifPort > 65535) {
-      Server.Logs.error(`Device ${info.id} has invalid ONVIF port: ${info.onvifPort}`);
-      return false;
-    }
-
-    return true;
+  public static validateConnectionInfo(info: Partial<DeviceConnectionInfo>): boolean {
+    return !!(
+      info &&
+      typeof info.ipAddress === 'string' &&
+      typeof info.rtspUsername === 'string' &&
+      typeof info.rtspPassword === 'string' &&
+      typeof info.onvifPort === 'number'
+    );
   }
 }
+
 

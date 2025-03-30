@@ -9,8 +9,8 @@ async function getCamera(deviceId: number): Promise<any> {
     throw new Error('Device not found');
   }
 
-  const [ip] = device.device.toString().split('|'); // discard the port
-  const port = device.onvif_port || 80; // fallback if ONVIF port is null
+  const [ip] = device.device.toString().split('|');
+  const port = device.onvif_port || 80;
 
   return new Promise((resolve, reject) => {
     new Cam(
@@ -199,13 +199,51 @@ static async getCapabilities(req: Request, res: Response) {
         console.log('getCapabilities error:', err);
         return res.status(500).json({ error: 'Failed to get capabilities' });
       }
-
-      console.log('Camera Capabilities:', capabilities); // 👈 Add this
-      res.json(capabilities); // 👈 Return the actual capabilities, not { capabilities }
+      res.json(capabilities);
     });
   } catch (err) {
     console.log('getCapabilities exception:', err);
     res.status(500).json({ error: 'Internal server error' });
   }
 }
+
+
+static async getPTZNodes(req: Request, res: Response) {
+  try {
+    const deviceId = parseInt(req.params.deviceId);
+    const cam = await getCamera(deviceId);
+
+    cam.getNodes((err: any, nodes: any) => {
+      if (err) {
+        console.log('getPTZNodes error:', err);
+        return res.status(500).json({ error: 'Failed to get PTZ nodes' });
+      }
+      res.json(nodes);
+    });
+  } catch (err) {
+    console.log('getPTZNodes exception:', err);
+    res.status(500).json({ error: 'Internal server error' });
+  }
+}
+
+
+
+static async getPTZConfiguration(req: Request, res: Response) {
+  try {
+    const deviceId = parseInt(req.params.deviceId);
+    const cam = await getCamera(deviceId);
+
+    cam.getPTZConfiguration((err: any, config: any) => {
+      if (err) {
+        console.log('getPTZConfiguration error:', err);
+        return res.status(500).json({ error: 'Failed to get PTZ configuration' });
+      }
+      res.json(config);
+    });
+  } catch (err) {
+    console.log('getPTZConfiguration exception:', err);
+    res.status(500).json({ error: 'Internal server error' });
+  }
+}
+
 }

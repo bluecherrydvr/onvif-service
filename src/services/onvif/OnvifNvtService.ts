@@ -23,26 +23,33 @@ export class OnvifNvtService {
     }
 
     // Device Connection
-    public async connect(): Promise<void> {
-        try {
-            const deviceInfo = await DeviceInfoService.getDeviceConnectionInfo(this.deviceId);
-            
-            this.device = new Device({
-                xaddr: `http://${deviceInfo.ipAddress}:${deviceInfo.onvifPort}/onvif/device_service`,
-                user: deviceInfo.rtspUsername,
-                pass: deviceInfo.rtspPassword
-            });
+// Add more detailed logging in OnvifNvtService.ts
+public async connect(): Promise<void> {
+    try {
+        const deviceInfo = await DeviceInfoService.getDeviceConnectionInfo(this.deviceId);
+        
+        // Log the exact connection details
+        Server.Logs.debug(`Attempting to connect to device with xaddr: http://${deviceInfo.ipAddress}:${deviceInfo.onvifPort}/onvif/device_service`);
 
+        this.device = new Device({
+            xaddr: `http://${deviceInfo.ipAddress}:${deviceInfo.onvifPort}/onvif/device_service`,
+            user: deviceInfo.rtspUsername,
+            pass: deviceInfo.rtspPassword
+        });
+
+        // Try to get raw response before initialization
+        try {
             await this.device.init();
-            this.events = new Events(this.device);
-            this.ptz = new PTZ(this.device);
-            
-            Server.Logs.info(`Connected to device ${this.deviceId}`);
-        } catch (error) {
-            Server.Logs.error(`Failed to connect to device ${this.deviceId}: ${error}`);
-            throw error;
+        } catch (initError) {
+            Server.Logs.error(`Device init error details: ${JSON.stringify(initError)}`);
+            throw initError;
         }
+    } catch (error) {
+        Server.Logs.error(`Failed to connect to device ${this.deviceId}: ${error}`);
+        throw error;
     }
+}
+
 
     // PTZ Commands
     public async ptzMove(x: number, y: number, zoom: number): Promise<void> {
@@ -121,6 +128,27 @@ export class OnvifNvtService {
     private handleVehicleEvent(message: any): void {
         Server.Logs.info(`Vehicle detected: ${JSON.stringify(message)}`);
         // Add your vehicle detection handling logic here
+
+public async getPTZDetails(): Promise<any> {
+    try {
+        if (!this.ptz) throw new Error('PTZ not initialized');
+        
+        const capabilities = await this.device?.getCapabilities();
+        const nodes = await this.ptz.getNodes();
+        const config = await this.ptz.getConfigurations();
+        
+        return {
+            capabilities: capabilities?.PTZ,
+            nodes,
+            configurations: config
+        };
+    } catch (error) {
+        Server.Logs.error(`Failed to get PTZ details: ${error}`);
+        throw error;
+    }
+}
+
+
     }
 }
 

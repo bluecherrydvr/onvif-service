@@ -3,8 +3,17 @@ import { Request, Response } from 'express';
 import { v4 as uuidv4 } from 'uuid';
 import { buildProbeMessage, parseProbeMatch } from '../utils/discoveryUtils';
 
+// Use CommonJS require for node-onvif since it has no types
+const Onvif = require('node-onvif');
+
 export class DiscoveryController {
   static async discoverDevices(req: Request, res: Response): Promise<void> {
+    // (Optional: if you need to create a device instance, note you must use the methods that node-onvif exposes.)
+    // For example, if you wanted to perform a probe using the onvif library itself, you might call:
+    // Onvif.startProbe().then(...).catch(...);
+    //
+    // However, the current implementation uses a UDP probe via dgram.
+    
     const socket = dgram.createSocket('udp4');
     const messageId = uuidv4();
     const probeMessage = Buffer.from(buildProbeMessage(messageId), 'utf8');
@@ -21,7 +30,7 @@ export class DiscoveryController {
       }
     });
 
-    socket.on('error', err => {
+    socket.on('error', (err) => {
       console.error('Socket error:', err);
     });
 
@@ -34,16 +43,19 @@ export class DiscoveryController {
         probeMessage.length,
         3702,
         '239.255.255.250',
-        err => {
-          if (err) console.error('Failed to send discovery probe:', err);
+        (err) => {
+          if (err) {
+            console.error('Failed to send discovery probe:', err);
+          }
         }
       );
     });
 
+    // Wait for responses to arrive, then close the socket and return the devices.
     setTimeout(() => {
       socket.close();
 
-      // Deduplicate again as extra safety if any slipped through
+      // Deduplicate devices based on normalized address
       const unique = new Map<string, any>();
       for (const device of discoveredDevices) {
         const normalized = device.address.replace(/^urn:/, '').trim();
