@@ -3,73 +3,58 @@ import cors from 'cors';
 import { json } from 'body-parser';
 import { Logger, getLogger, configure } from 'log4js';
 import { Sequelize } from 'sequelize';
-import { authenticate } from './utils/Auth';
-import { Routes } from './routes/Routes';
 import { Models } from './models/Models';
+import { registerRoutes } from './routes/Routes';
 
 export class Server {
-    public static Logs: Logger = getLogger('ONVIF Service');
-    public static App = express();
-    public static sequelize: Sequelize;
+  public static Logs: Logger = getLogger('ONVIF Service');
+  public static App = express();
+  public static sequelize: Sequelize;
 
-    public static Initialize(): void {
-        // Initialize logging
-        configure({
-            appenders: {
-                onvif: { type: 'dateFile', filename: 'logs/onvif-service.logs' },
-                console: {
-                    type: 'console',
-                    layout: {
-                        type: 'pattern',
-                        pattern: '%[%d{yyyy-MM-dd hh:mm:ss} [%c] %-5p - %m%]'
-                    }
-                }
-            },
-            categories: {
-                default: {
-                    appenders: ['onvif', 'console'],
-                    level: 'debug'
-                }
-            }
-        });
+  public static Initialize(): void {
+    // Setup logging
+    configure({
+      appenders: {
+        out: { type: 'stdout' },
+        onvif: { type: 'file', filename: 'logs/onvif-service.log' }
+      },
+      categories: {
+        default: { appenders: ['out', 'onvif'], level: 'debug' }
+      }
+    });
 
-        // Database connection
-        this.sequelize = new Sequelize(
-            process.env.DB_DATABASE || 'bluecherry',
-            process.env.DB_USERNAME || 'root',
-            process.env.DB_PASSWORD || '',
-            {
-                host: process.env.DB_HOST || 'localhost',
-                dialect: 'mysql',
-                define: { timestamps: false },
-                logging: msg => getLogger('Sequelize').debug(msg)
-            }
-        );
+    // Configure Sequelize
+    this.sequelize = new Sequelize(
+      process.env.DB_DATABASE || 'bluecherry',
+      process.env.DB_USERNAME || 'bluecherry',
+      process.env.DB_PASSWORD || '123',
+      {
+        host: process.env.DB_HOST || '127.0.0.1',
+        dialect: 'mysql',
+        define: { timestamps: false }
+      }
+    );
 
-        // Middleware
-        this.App.use(cors());
-        this.App.use(json());
-        this.App.use(authenticate);
+    // Setup middleware
+    this.App.use(cors());
+    this.App.use(json());
+  }
+
+  public static async Start(port: number): Promise<void> {
+    try {
+      await this.sequelize.authenticate();
+      this.Logs.info('Database connection established');
+
+      await Models.Initialize();  // Register and sync DB models
+      registerRoutes(this.App);   // Setup routes
+
+      this.App.listen(port, () => {
+        this.Logs.info(`ONVIF Service started on port ${port}`);
+      });
+    } catch (error) {
+      this.Logs.fatal('Failed to start server:', error);
+      process.exit(1);
     }
-
-    public static async Start(port: number): Promise<void> {
-        try {
-            await this.sequelize.authenticate();
-            this.Logs.info('Database connection established');
-            
-            // Initialize models
-            await Models.Initialize();
-            
-            // Register routes
-            Routes.Register(this.App);
-
-            this.App.listen(port, () => {
-                this.Logs.info(`ONVIF Service started on port ${port}`);
-            });
-        } catch (error) {
-            this.Logs.fatal('Failed to start server:', error);
-            process.exit(1);
-        }
-    }
+  }
 }
 

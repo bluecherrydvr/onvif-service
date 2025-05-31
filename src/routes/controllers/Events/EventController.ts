@@ -1,5 +1,6 @@
 import { OnvifEventInterface } from '../../../services/onvif/EventInterface';
 import { Devices } from '../../../models/db/Device';
+import { Server } from '../../../server';
 
 export class EventController {
     private static eventInterfaces: Map<number, OnvifEventInterface> = new Map();
@@ -11,15 +12,13 @@ export class EventController {
                 throw new Error(`Device ${deviceId} not found`);
             }
 
-            const eventInterface = new OnvifEventInterface({
-                host: device.ipAddress,
-                port: device.onvif_port,
-                username: device.rtsp_username,
-                password: device.rtsp_password
-            });
+            let eventInterface = this.eventInterfaces.get(deviceId);
+            if (!eventInterface) {
+                eventInterface = new OnvifEventInterface(deviceId);
+                this.eventInterfaces.set(deviceId, eventInterface);
+            }
 
             await eventInterface.startEventSubscription();
-            this.eventInterfaces.set(deviceId, eventInterface);
 
         } catch (error) {
             Server.Logs.error(`Failed to subscribe to device events: ${error}`);
@@ -28,10 +27,15 @@ export class EventController {
     }
 
     static async unsubscribeFromDeviceEvents(deviceId: number): Promise<void> {
-        const eventInterface = this.eventInterfaces.get(deviceId);
-        if (eventInterface) {
-            eventInterface.stopEventSubscription();
-            this.eventInterfaces.delete(deviceId);
+        try {
+            const eventInterface = this.eventInterfaces.get(deviceId);
+            if (eventInterface) {
+                await eventInterface.stopEventSubscription();
+                this.eventInterfaces.delete(deviceId);
+            }
+        } catch (error) {
+            Server.Logs.error(`Failed to unsubscribe from device events: ${error}`);
+            throw error;
         }
     }
 }

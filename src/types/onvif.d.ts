@@ -1,72 +1,32 @@
-import { Request, Response, NextFunction } from 'express';
-import { Devices } from '../models/db/Device';
-import ErrorResponse from '../models/api/Responses/ErrorResponse';
+import { Request } from 'express';
+import { DeviceInfoService } from '../services/onvif/DeviceInfoService';
 import { Server } from '../server';
-import { Cam } from 'onvif';
 
-export class CameraEventTypes {
-    static async getEventTypes(req: Request, res: Response, next: NextFunction): Promise<void> {
-        try {
-            const deviceId = req.params.deviceId;
-            
-            // Get device details from database
-            const device = await Devices.findOne({ where: { id: deviceId } });
-            if (!device) {
-                res.status(404).send(new ErrorResponse(404, `Device with ID ${deviceId} not found`));
-                return;
-            }
-
-            // Connect to camera using ONVIF
-            const camera = await this.connectToCamera({
-                hostname: device.ipAddress,
-                username: device.username,
-                password: device.password,
-                port: device.port || 80
-            });
-
-            // Get supported events
-            const events = await this.getSupportedEvents(camera);
-            
-            res.status(200).json({
-                deviceId: deviceId,
-                supportedEvents: events
-            });
-
-        } catch (error) {
-            Server.Logs.error(`Error getting event types: ${error}`);
-            res.status(500).send(new ErrorResponse(500, `Failed to get event types: ${error.message}`));
-        }
-    }
-
-    private static connectToCamera(config: {
+declare module 'onvif' {
+  export class Cam {
+    constructor(
+      config: {
         hostname: string;
         username: string;
         password: string;
         port: number;
-    }): Promise<Cam> {
-        return new Promise((resolve, reject) => {
-            new Cam(config, (error: Error | null) => {
-                if (error) {
-                    reject(error);
-                    return;
-                }
-                resolve(camera);
-            });
-        });
-    }
+        timeout?: number;
+      },
+      callback: (error: Error | null, camera?: Cam) => void
+    );
 
-    private static getSupportedEvents(camera: Cam): Promise<any> {
-        return new Promise((resolve, reject) => {
-            // Note: The exact method name might vary depending on the ONVIF version
-            // Common methods might include: getEventProperties, getEventService, or getEventTypes
-            camera.getEventProperties((error: Error | null, events: any) => {
-                if (error) {
-                    reject(error);
-                    return;
-                }
-                resolve(events);
-            });
-        });
-    }
+    getEventProperties(callback: (error: Error | null, events: any) => void): void;
+
+    // New methods added based on actual runtime behavior
+    getProfiles(callback: (error: Error | null, profiles: any[]) => void): void;
+    getStreamUri(
+      options: { protocol: string },
+      callback: (error: Error | null, stream: any) => void
+    ): void;
+  }
 }
+
+export function startProbe(): Promise<any[]>;
+export function Discovery(): any;
+
 

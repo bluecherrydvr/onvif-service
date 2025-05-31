@@ -1,0 +1,42 @@
+static async subscribeToDeviceEvents(deviceId: number): Promise<void> {
+    try {
+        console.log(`Attempting to find device ${deviceId}`);
+        const device = await Devices.findOne({ 
+            where: { id: deviceId },
+            logging: console.log  // This will log the SQL query
+        });
+        
+        if (!device) {
+            console.log(`Device ${deviceId} not found in database`);
+            throw new Error(`Device ${deviceId} not found`);
+        }
+
+        console.log('Device found:', JSON.stringify(device.toJSON(), null, 2));
+
+        // Create event interface with proper connection details
+        const eventInterface = new OnvifEventInterface({
+            host: device.ipAddress,
+            port: device.onvif_port,
+            username: device.rtsp_username,
+            password: device.rtsp_password
+        });
+
+        await eventInterface.initialize();
+        this.eventInterfaces.set(deviceId, eventInterface);
+
+    } catch (error) {
+        Server.Logs.error(`Failed to subscribe to device events: ${error}`);
+        throw error;
+    }
+}
+
+    static async unsubscribeFromDeviceEvents(deviceId: number): Promise<void> {
+        const eventInterface = this.eventInterfaces.get(deviceId);
+        if (eventInterface) {
+            eventInterface.stop();
+            this.eventInterfaces.delete(deviceId);
+        }
+    }
+}
+
+
