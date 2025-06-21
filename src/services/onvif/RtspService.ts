@@ -1,5 +1,5 @@
 import { OnvifDevice } from 'node-onvif-ts';
-import { Server } from '../../server';
+import { Logger } from '../../utils/Logger';
 
 export interface StreamProfile {
   profileName: string;
@@ -20,12 +20,12 @@ export async function getDeviceRtspUrls(
       pass: password || ''
     });
 
-    Server.Logs.debug('Attempting to initialize ONVIF device:', xaddr);
+    Logger.debug('Attempting to initialize ONVIF device:', xaddr);
 
     try {
       await device.init();
     } catch (initError: any) {
-      Server.Logs.error('Device initialization failed:', initError);
+      Logger.error('Device initialization failed:', initError);
       throw new Error(`Failed to initialize the device: ${initError.message}`);
     }
 
@@ -37,7 +37,7 @@ export async function getDeviceRtspUrls(
         throw new Error('No profiles found on device');
       }
     } catch (profileError: any) {
-      Server.Logs.error('Failed to get device profiles:', profileError);
+      Logger.error('Failed to get device profiles:', profileError);
       throw new Error(`Failed to get device profiles: ${profileError.message}`);
     }
 
@@ -52,11 +52,11 @@ export async function getDeviceRtspUrls(
       };
     });
 
-    Server.Logs.debug('Retrieved RTSP URLs:', rtspUrls);
+    Logger.debug('Retrieved RTSP URLs:', rtspUrls);
     return rtspUrls;
     
   } catch (error: any) {
-    Server.Logs.error(`Failed to get RTSP URLs: ${error.message}`);
+    Logger.error(`Failed to get RTSP URLs: ${error.message}`);
     throw error;
   }
 }

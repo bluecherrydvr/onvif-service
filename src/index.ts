@@ -1,16 +1,21 @@
-import express from 'express';
-import { registerRoutes } from './routes/Routes';
+// Apply the ONVIF library patch before importing
+import './patches/onvif-fix';
+import './patches/onvif-events-patch';
+
 import { Server } from './server';
-import { Models } from './models/Models';
+import dotenv from 'dotenv';
 
-const app = express();
-app.use(express.json());
-registerRoutes(app);
+// Load environment variables
+dotenv.config();
 
-Server.Initialize(); // ✅ Make sure this is called
-Models.Initialize(); // ✅ Must come AFTER Server.Initialize
+// Get the port from environment variables or use a default
+const PORT = parseInt(process.env.PORT || '4000', 10);
 
-app.listen(4000, () => {
-  console.log('[INFO] ONVIF Service started on port 4000');
-});
-
+// Initialize and start the server
+try {
+  Server.Initialize();
+  Server.Start(PORT);
+} catch (error) {
+  Server.Logs.fatal('Failed to initialize or start the server:', error);
+  process.exit(1);
+}

@@ -1,27 +1,28 @@
-// In src/routes/controllers/Events/EventSubscription.ts
-export class EventSubscription {
-    static async subscribeToEvents(deviceId: number, eventTypes: string[]): Promise<void> {
-        try {
-            // Validate device exists
-            const device = await Devices.findOne({ where: { id: deviceId } });
-            if (!device) {
-                throw new Error(`Device ${deviceId} not found`);
-            }
+import { Request, Response } from 'express';
+import { Events } from '../../../models/db/Events';
+import { Server } from '../../../server';
 
-            // Store subscription preferences
-            await Events.create({
-                device_id: deviceId,
-                type_id: JSON.stringify(eventTypes),
-                time: Math.floor(Date.now() / 1000),
-                details: 'Event subscription created'
-            });
+/**
+ * Receives an event subscription payload and persists it to the database.
+ * This endpoint can simulate ONVIF-triggered events or be used for manual testing.
+ */
+export async function subscribeToEvents(req: Request, res: Response): Promise<void> {
+  const { deviceId } = req.params;
+  const { type_id, details } = req.body;
 
-            // Set up event listeners
-            // TODO: Implement event listener logic
-        } catch (error) {
-            Server.Logs.error(`Failed to subscribe to events: ${error}`);
-            throw error;
-        }
-    }
+  try {
+    await Events.create({
+      id: 0,
+      device_id: parseInt(deviceId, 10),
+      type_id,
+      time: Math.floor(Date.now() / 1000),
+      details: JSON.stringify(details || {}),
+    });
+
+    res.status(200).json({ message: 'Event subscription recorded' });
+  } catch (error: any) {
+    Server.Logs.error(`Failed to subscribe to events: ${error}`);
+    res.status(500).json({ error: error.message });
+  }
 }
 

@@ -1,7 +1,9 @@
-import { Server } from '../server';  // Changed from '../../server' to '../server'
+// src/services/EventProcessor.ts
+import { Server } from '../server'; // Assuming you have a server object for logging
 import { Events } from '../models/db/Events';
 
 export class EventProcessor {
+    // Static method to process events
     static async processEvent(event: any): Promise<void> {
         try {
             // Validate event format
@@ -15,13 +17,16 @@ export class EventProcessor {
                 case 'tampering':
                     await this.handleTamperingEvent(event);
                     break;
-                // Add more event types
+                // Add more event types here as needed
+                default:
+                    console.log(`Unknown event type: ${event.type_id}`);
+                    break;
             }
 
-            // Store processed event
+            // Store processed event with timestamp
             await Events.create({
                 ...event,
-                time: Math.floor(Date.now() / 1000)
+                time: Math.floor(Date.now() / 1000), // Store current time as a Unix timestamp
             });
 
         } catch (error) {
@@ -30,22 +35,22 @@ export class EventProcessor {
         }
     }
 
+    // Event validation
     private static validateEvent(event: any): void {
         if (!event.type_id) {
             throw new Error('Event type is required');
         }
     }
 
+    // Handling 'motion' type events
     private static async handleMotionEvent(event: any): Promise<void> {
-        // Add implementation using the event parameter
         Server.Logs.debug(`Processing motion event: ${JSON.stringify(event)}`);
-        // Add your motion event handling logic here
+        // Add motion-specific logic here
     }
 
+    // Handling 'tampering' type events
     private static async handleTamperingEvent(event: any): Promise<void> {
-        // Add implementation using the event parameter
         Server.Logs.debug(`Processing tampering event: ${JSON.stringify(event)}`);
-        // Add your tampering event handling logic here
+        // Add tampering-specific logic here
     }
 }
-

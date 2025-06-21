@@ -1,6 +1,7 @@
 import { Cam } from 'onvif';
 import { DeviceInfoService } from './DeviceInfoService';
 import { Server } from '../../server';
+import { Logger } from '../../utils/Logger';
 
 export class OnvifEventInterface {
   private camera?: Cam & { getEventProperties?: Function };
@@ -36,7 +37,8 @@ export class OnvifEventInterface {
     password: string
   }): Promise<void> {
     return new Promise((resolve, reject) => {
-      this.camera = new Cam(config, (err) => {
+      this.camera = new Cam(config);
+      this.camera.connect((err) => {
         if (err) {
           reject(err);
         } else {

@@ -8,6 +8,7 @@
   "license": "ISC",
   "scripts": {
     "start": "ts-node src/index.ts",
+    "start:prod": "node dist/index.js",
     "build": "tsc",
     "dev": "nodemon src/index.ts",
     "test": "echo \"Error: no test specified\" && exit 1"
@@ -23,7 +24,7 @@
     "mysql2": "^3.13.0",
     "node-onvif": "^0.1.7",
     "node-onvif-ts": "^0.1.7",
-    "onvif": "github:agsh/onvif",
+    "onvif": "git+https://github.com/agsh/onvif.git#4855a3911a7219e75e04e808cf06210aee379e9b",
     "sequelize": "^6.37.6",
     "soap": "^1.1.9",
     "uuid": "^11.1.0",
@@ -32,10 +33,13 @@
   "devDependencies": {
     "@types/cors": "^2.8.17",
     "@types/express": "^4.17.21",
+    "@types/jest": "^29.5.14",
     "@types/node": "^20.17.27",
     "@types/uuid": "^10.0.0",
     "@types/xml2js": "^0.4.14",
+    "jest": "^29.7.0",
     "nodemon": "^3.0.3",
+    "ts-jest": "^29.3.1",
     "ts-node": "^10.9.2",
     "typescript": "^5.8.2"
   }

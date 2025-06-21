@@ -1,5 +1,7 @@
 import { Server } from '../server';
-import { Devices, Register as RegisterDevices } from './Devices';
+import { Devices, Register as RegisterDevices } from './db/Device';
+
+export { Devices }; 
 
 export class Models {
   public static Devices: typeof Devices;
@@ -8,7 +10,6 @@ export class Models {
     RegisterDevices(Server.sequelize);
     Models.Devices = Devices;
 
-    await Server.sequelize.sync();
+    await Server.sequelize.sync(); 
   }
 }
-

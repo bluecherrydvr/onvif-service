@@ -1,36 +1,23 @@
-export class EventQuery {
-    static async queryEvents(params: {
-        deviceId?: number,
-        startTime?: number,
-        endTime?: number,
-        types?: string[],
-        limit?: number
-    }): Promise<any[]> {
-        const where: any = {};
-        
-        if (params.deviceId) {
-            where.device_id = params.deviceId;
-        }
+import { Request, Response } from 'express';
+import { Events } from '../../../models/db/Events';
+import { Server } from '../../../server';
 
-        if (params.types?.length) {
-            where.type_id = { [Op.in]: params.types };
-        }
+export async function subscribeToEvents(req: Request, res: Response): Promise<void> {
+  const { deviceId } = req.params;
+  const { type_id, details } = req.body;
 
-        if (params.startTime || params.endTime) {
-            where.time = {};
-            if (params.startTime) {
-                where.time[Op.gte] = params.startTime;
-            }
-            if (params.endTime) {
-                where.time[Op.lte] = params.endTime;
-            }
-        }
+  try {
+    await Events.create({
+      id: 0,
+      device_id: parseInt(deviceId, 10),
+      type_id,
+      time: Math.floor(Date.now() / 1000),
+      details: JSON.stringify(details || {})
+    });
 
-        return Events.findAll({
-            where,
-            limit: params.limit || 100,
-            order: [['time', 'DESC']]
-        });
-    }
+    res.status(200).json({ message: 'Event subscription recorded' });
+  } catch (error: any) {
+    Server.Logs.error(`Failed to subscribe to events: ${error}`);
+    res.status(500).json({ error: error.message });
+  }
 }
-

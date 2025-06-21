@@ -1,27 +1,27 @@
 import { Request, Response } from 'express';
-import { Server } from '../server';
-import { OnvifEventHandler } from '../services/OnvifEventHandler';
+import { EventHandlerService } from '../services/onvif/EventHandlerService';
 
-export class TriggerController {
-    static async trigger(req: Request, res: Response): Promise<void> {
-        try {
-            const cameraId = parseInt(req.query.camera_id as string);
-            const description = req.query.description as string;
+const eventHandler = new EventHandlerService();
 
-            if (!cameraId || isNaN(cameraId)) {
-                res.status(400).send('Bad Request - numeric parameter camera_id is required');
-                return;
-            }
+/**
+ * Endpoint to manually trigger an ONVIF event recording for testing purposes.
+ * This simulates an event as if it were received from the camera.
+ */
+export async function triggerEventRecording(req: Request, res: Response): Promise<void> {
+    const deviceId = parseInt(req.params.deviceId, 10);
 
-            await OnvifEventHandler.triggerRecording(cameraId, description || 'Manual Trigger');
-            res.status(200).send('OK');
-        } catch (error: unknown) {
-            Server.Logs.error(`Trigger error: ${error}`);
-            if (error instanceof Error) {
-                res.status(500).send(`Server Error - ${error.message}`);
-            } else {
-                res.status(500).send('Server Error - Unknown error occurred');
-            }
-        }
+    const mockEvent = {
+        type: req.body.type || 'manual',
+        description: req.body.description || 'Manually triggered event',
+        timestamp: new Date().toISOString(),
+    };
+
+    try {
+        await eventHandler.handleDeviceEvent(deviceId, mockEvent);
+        res.status(200).json({ message: 'Event successfully recorded.' });
+    } catch (error: any) {
+        res.status(500).json({ error: error.message });
     }
 }
+
+

@@ -5,6 +5,13 @@ import { Logger, getLogger, configure } from 'log4js';
 import { Sequelize } from 'sequelize';
 import { Models } from './models/Models';
 import { registerRoutes } from './routes/Routes';
+import { WatcherService } from './services/WatcherService';
+//import { registerAllModels } from './models/Models';
+
+
+//WatcherService.start();
+//registerAllModels();
+
 
 export class Server {
   public static Logs: Logger = getLogger('ONVIF Service');
@@ -27,7 +34,7 @@ export class Server {
     this.sequelize = new Sequelize(
       process.env.DB_DATABASE || 'bluecherry',
       process.env.DB_USERNAME || 'bluecherry',
-      process.env.DB_PASSWORD || '123',
+      process.env.DB_PASSWORD,
       {
         host: process.env.DB_HOST || '127.0.0.1',
         dialect: 'mysql',
@@ -45,11 +52,12 @@ export class Server {
       await this.sequelize.authenticate();
       this.Logs.info('Database connection established');
 
-      await Models.Initialize();  // Register and sync DB models
-      registerRoutes(this.App);   // Setup routes
+      await Models.Initialize();       // ✅ Initialize models first
+      registerRoutes(this.App);       // ✅ Then routes
+      WatcherService.start();         // ✅ Only now start the Watcher
 
-      this.App.listen(port, () => {
-        this.Logs.info(`ONVIF Service started on port ${port}`);
+      this.App.listen(port, '0.0.0.0', () => {
+        this.Logs.info(`ONVIF Service - ONVIF Service started on port ${port}`);
       });
     } catch (error) {
       this.Logs.fatal('Failed to start server:', error);
@@ -57,4 +65,3 @@ export class Server {
     }
   }
 }
-

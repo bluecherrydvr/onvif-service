@@ -1,24 +1,30 @@
 {
   "compilerOptions": {
+    "forceConsistentCasingInFileNames": true,
     "sourceMap": true,
     "esModuleInterop": true,
     "allowSyntheticDefaultImports": true,
     "skipLibCheck": true,
-    "allowJs": false,
+    "allowJs": true,  // Allow JS files
     "noImplicitAny": true,
     "moduleResolution": "node",
     "resolveJsonModule": true,
-    "lib": ["es2018"],
+    "lib": ["es2022"],
     "module": "commonjs",
-    "target": "es2018",
+    "target": "es2022",
     "baseUrl": ".",
     "paths": {
       "*": ["node_modules/*", "src/types/*"]
     },
     "typeRoots": ["node_modules/@types", "src/types"],
+    "types": ["jest", "node"],             
     "outDir": "./built"
   },
-  "include": ["./src/**/*"],
+  "include": [
+    "./src/**/*",
+    "./src/**/*.test.ts",  // Ensure that test files are included properly
+    "./src/tests/**/*.ts"  // Added support for tests in the 'tests' folder
+  ],
   "exclude": ["node_modules"]
 }
 

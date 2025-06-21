@@ -1,23 +1,17 @@
-import Devices from '../models/db/Device';
-
-export interface CameraConfig {
-  hostname: string;
-  username: string;
-  password: string;
-  port: number;
-}
+import { Devices } from '../models/db/Device';
 
 export class CameraService {
-  static async getCameraConfig(deviceId: number): Promise<CameraConfig> {
-    const device = await Devices.findOne({ where: { id: deviceId } });
-    if (!device) throw new Error(`Device ID ${deviceId} not found`);
+  static async getCameraById(id: number) {
+    return await Devices.findByPk(id);
+  }
 
-    return {
-      hostname: device.device,
-      username: device.rtsp_username,
-      password: device.rtsp_password,
-      port: 80, // or device.port if you store it
-    };
+  static async listAllCameras() {
+    return await Devices.findAll();
+  }
+
+  static async updateCameraSettings(id: number, settings: any) {
+    const camera = await Devices.findByPk(id);
+    if (!camera) throw new Error('Camera not found');
+    return await camera.update(settings);
   }
 }
-

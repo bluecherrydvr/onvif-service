@@ -1,53 +1,77 @@
-import {DataTypes, Model} from 'sequelize';
-import {Server} from '../../server';
+import { DataTypes, Model, Sequelize } from 'sequelize';
 
+// This interface is not strictly necessary but provides a clear definition
+// of the model's attributes for type-safety.
 export interface DeviceAttributes {
   id: number;
+  device_name: string;
+  device: Buffer;
   onvif_events_enabled: boolean;
   onvif_port: number;
-  rtsp_username: string;
-  rtsp_password: string;
-  ip_address: string;
+  rtsp_username: Buffer;
+  rtsp_password: Buffer;
   disabled: boolean;
 }
 
+// The 'declare' keyword is the key to solving the shadowing issue.
+// It tells TypeScript that these properties exist for type-checking,
+// but they are not actually initialized on the class, so they do not
+// interfere with Sequelize's runtime getters and setters.
 export class Devices extends Model<DeviceAttributes> implements DeviceAttributes {
-  public id!: number;
-  public onvif_events_enabled!: boolean;
-  public onvif_port!: number;
-  public rtsp_username!: string;
-  public rtsp_password!: string;
-  public ip_address!: string;
-  public disabled!: boolean;
+  public declare id: number;
+  public declare device_name: string;
+  public declare device: Buffer;
+  public declare onvif_events_enabled: boolean;
+  public declare onvif_port: number;
+  public declare rtsp_username: Buffer;
+  public declare rtsp_password: Buffer;
+  public declare disabled: boolean;
 }
 
-export function Register(sequelize = Server.sequelize): void {
+export function Register(sequelize: Sequelize): void {
   Devices.init(
     {
       id: {
         type: DataTypes.INTEGER,
         primaryKey: true,
-        autoIncrement: true
+        autoIncrement: true,
+      },
+      device_name: {
+        type: DataTypes.STRING,
+        allowNull: true,
+      },
+      device: {
+        type: DataTypes.BLOB('tiny'),
+        allowNull: true,
       },
       onvif_events_enabled: {
         type: DataTypes.BOOLEAN,
-        defaultValue: false
+        allowNull: true,
+        defaultValue: false,
       },
       onvif_port: {
         type: DataTypes.INTEGER,
-        defaultValue: 80
+        allowNull: true,
+        defaultValue: 80,
       },
-      rtsp_username: DataTypes.STRING,
-      rtsp_password: DataTypes.STRING,
-      ip_address: DataTypes.STRING,
+      rtsp_username: {
+        type: DataTypes.BLOB('tiny'),
+        allowNull: true,
+      },
+      rtsp_password: {
+        type: DataTypes.BLOB('tiny'),
+        allowNull: true,
+      },
       disabled: {
         type: DataTypes.BOOLEAN,
-        defaultValue: false
-      }
+        allowNull: true,
+        defaultValue: false,
+      },
     },
     {
       sequelize,
-      modelName: 'Devices'
+      tableName: 'Devices',
+      timestamps: false,
     }
   );
 }

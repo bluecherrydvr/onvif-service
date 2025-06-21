@@ -1,10 +1,14 @@
 import { OnvifEventInterface } from './EventInterface';
-import { DeviceInfoService } from './DeviceInfoService';
 import { Server } from '../../server';
+import { Events } from '../../models/db/Events';
 
 export class EventHandlerService {
     private activeSubscriptions: Map<number, OnvifEventInterface> = new Map();
 
+    /**
+     * Subscribes to ONVIF device events for a given device ID.
+     * Called when enabling ONVIF event handling for a camera.
+     */
     async subscribeToDeviceEvents(deviceId: number): Promise<void> {
         if (this.activeSubscriptions.has(deviceId)) {
             return;
@@ -20,6 +24,10 @@ export class EventHandlerService {
         }
     }
 
+    /**
+     * Unsubscribes from ONVIF device events for a given device ID.
+     * Called when disabling ONVIF event handling for a camera.
+     */
     async unsubscribeFromDeviceEvents(deviceId: number): Promise<void> {
         const subscription = this.activeSubscriptions.get(deviceId);
         if (subscription) {
@@ -27,32 +35,24 @@ export class EventHandlerService {
             this.activeSubscriptions.delete(deviceId);
         }
     }
-}
 
+    /**
+     * Persists an ONVIF event received from a device to the Events table.
+     * Likely triggered by a PullPoint listener.
+     */
     async handleDeviceEvent(deviceId: number, event: any): Promise<void> {
-         try {
-           // Process and store the event in the database
+        try {
             await Events.create({
-               id: 0, // If id is auto-incrementing, Sequelize will handle this
-               device_id: deviceId,
-               type_id: event.type,
-               time: Math.floor(Date.now() / 1000),
-               details: JSON.stringify(event)
-        });
-    } catch (error) {
-        Server.Logs.error(`Failed to store device event: ${error}`);
-        throw error;
+                id: 0, // Sequelize should auto-handle if set correctly
+                device_id: deviceId,
+                type_id: event.type,
+                time: Math.floor(Date.now() / 1000),
+                details: JSON.stringify(event),
+            });
+        } catch (error) {
+            Server.Logs.error(`Failed to store device event: ${error}`);
+            throw error;
+        }
     }
-}
-
-    // Helper method to get all active subscriptions
-    getActiveSubscriptions(): number[] {
-        return Array.from(this.activeSubscriptions.keys());
-    }
-
-    // Method to check if a device is subscribed
-    isDeviceSubscribed(deviceId: number): boolean {
-        return this.activeSubscriptions.has(deviceId);
-    }
-}
+}    
 
