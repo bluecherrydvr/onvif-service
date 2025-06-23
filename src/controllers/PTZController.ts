@@ -107,6 +107,8 @@ export class PTZController {
           return res.status(400).json({ error: 'Invalid direction' });
       }
 
+      console.log('Sending continuousMove with velocity:', velocity);
+
       cam.continuousMove(velocity, (err: Error | null) => {
           if (err) {
               console.log('continuousMove error:', err);
@@ -118,10 +120,10 @@ export class PTZController {
                   if (stopErr) {
                       console.log('stop error after continuous move:', stopErr);
                   } else {
-                      console.log(`Stopped movement after ${duration || 3} seconds.`);
+                      console.log(`Stopped movement after ${duration || 2} seconds.`);
                   }
               });
-          }, (duration || 3) * 1000);
+          }, (duration || 2) * 1000);
           
           res.json({ message: 'Moving continuously' });
       });
