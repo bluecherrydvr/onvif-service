@@ -1,0 +1,13 @@
+#!/bin/sh
+set -e
+
+if [ "" = "configure" ]; then
+    # Install the service file
+    cp debian/bluecherry-onvif.service /etc/systemd/system/bluecherry-onvif.service
+
+    # Enable and start the service
+    systemctl enable bluecherry-onvif.service
+    systemctl start bluecherry-onvif.service
+fi
+
+exit 0

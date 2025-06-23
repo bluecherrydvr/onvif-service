@@ -1,0 +1,5 @@
+src /usr/share/bluecherry-onvif/
+package.json /usr/share/bluecherry-onvif/
+package-lock.json /usr/share/bluecherry-onvif/
+tsconfig.json /usr/share/bluecherry-onvif/
+nodemon.json /usr/share/bluecherry-onvif/

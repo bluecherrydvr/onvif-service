@@ -1,0 +1,11 @@
+Package: bluecherry-onvif
+Version: 1.0.0
+Architecture: amd64
+Maintainer: Curtis Hall <chall@corp.bluecherry.net>
+Installed-Size: 433
+Depends: nodejs (>= 18)
+Section: misc
+Priority: optional
+Description: ONVIF service for Bluecherry
+ This package provides the ONVIF service for Bluecherry.
+ It handles ONVIF events, PTZ control, and other ONVIF-related features.

@@ -1,0 +1,13 @@
+#!/bin/sh
+set -e
+
+if [ "" = "remove" ]; then
+    # Stop and disable the service
+    systemctl stop bluecherry-onvif.service
+    systemctl disable bluecherry-onvif.service
+
+    # Remove the service file
+    rm -f /etc/systemd/system/bluecherry-onvif.service
+fi
+
+exit 0
