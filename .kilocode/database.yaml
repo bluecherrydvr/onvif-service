@@ -1,0 +1,12 @@
+devices_model:
+  table: Devices
+  fields:
+    - id: integer, primary key
+    - device: string, device identifier or name
+    - rtsp_username: string, ONVIF/RTSP username
+    - rtsp_password: string, ONVIF/RTSP password
+    - onvif_port: integer, ONVIF service port
+  storage: Sequelize ORM, MySQL database
+  notes:
+    - Credentials are stored in plaintext in the database (ensure DB is secured).
+    - Used for ONVIF device communication and event subscription. 

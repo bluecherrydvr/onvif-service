@@ -24,7 +24,7 @@
     "mysql2": "^3.13.0",
     "node-onvif": "^0.1.7",
     "node-onvif-ts": "^0.1.7",
-    "onvif": "git+https://github.com/agsh/onvif.git#4855a3911a7219e75e04e808cf06210aee379e9b",
+    "onvif": "^0.8.1",
     "sequelize": "^6.37.6",
     "soap": "^1.1.9",
     "uuid": "^11.1.0",

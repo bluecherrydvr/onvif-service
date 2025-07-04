@@ -1,6 +1,4 @@
 // Apply the ONVIF library patch before importing
-import './patches/onvif-fix';
-import './patches/onvif-events-patch';
 
 import { Server } from './server';
 import dotenv from 'dotenv';

@@ -1,0 +1,9 @@
+credential_handling:
+  - Device credentials (rtsp_username, rtsp_password) are stored in the Devices model (Sequelize, MySQL).
+  - Credentials are passed to ONVIF/RTSP endpoints as needed for device communication.
+  - No API-level authentication is implemented for the service endpoints (assumed to be on a trusted network).
+  - Environment variables are used for discovery timeouts and multicast settings.
+unsafe_patterns_to_avoid:
+  - Do not expose device credentials in logs or error messages.
+  - Do not expose the API to untrusted networks without additional authentication.
+  - Avoid hardcoding sensitive values in source files. 

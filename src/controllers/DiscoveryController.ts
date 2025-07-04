@@ -85,7 +85,7 @@ export class DiscoveryController {
           // Store the full device information
           discoveredDevicesMap.set(deviceKey, {
             address: device.name,
-            xaddrs: [device.xaddrs],
+            xaddrs: device.xaddrs,
             types: device.types,
             scopes: device.scopes,
             manufacturer: device.hardware || '',
@@ -232,7 +232,7 @@ export class DiscoveryController {
       }
       
       // Continue with next retry
-      setTimeout(() => this.startDiscoveryWithRetries(req, res, retryCount, startTime), RETRY_INTERVAL);
+      setTimeout(() => this.startDiscoveryWithRetries(req, res, retryCount, startTime), DISCOVERY_TIMEOUT);
     }, DISCOVERY_TIMEOUT);
   }
   
@@ -266,4 +266,3 @@ export class DiscoveryController {
     return `${device.name}|${device.xaddrs || ''}`;
   }
 }
-

@@ -1,0 +1,21 @@
+project_name: onvif-service
+language_stack:
+  - TypeScript
+  - Node.js
+  - Express
+  - Sequelize (MySQL)
+description: |
+  ONVIF-service is a Node.js/TypeScript backend for discovering, managing, and subscribing to ONVIF-compatible surveillance devices. It exposes a REST API for device discovery, PTZ control, RTSP URL extraction, and ONVIF event subscription/handling. The service is designed for integration with Bluecherry and similar NVR/dispatch systems.
+major_components:
+  - src/routes: API route definitions and REST endpoint registration
+  - src/controllers: Business logic for device discovery, PTZ, and triggers
+  - src/services: ONVIF protocol handling, event subscription, and device wrappers
+  - src/models: Sequelize models for device and event storage
+  - src/utils: Utility functions for ONVIF, logging, and topic parsing
+legacy_php:
+  description: |
+    The www/ directory contains legacy PHP code for ONVIF device discovery and control, using a custom Ponvif.php class for ONVIF SOAP communication. Device discovery, PTZ, and stream URI logic are implemented in PHP and integrated with the web UI (see discoverCameras.js). The modern onvif-service Node.js backend supersedes this logic for new deployments.
+  key_files:
+    - www/lib/Ponvif.php: Core ONVIF client (SOAP, PTZ, stream URI, capabilities)
+    - www/lib/lib.php: Device model, credential handling, and device creation logic
+    - www/template/dist/js/discoverCameras.js: UI logic for displaying discovered ONVIF devices 

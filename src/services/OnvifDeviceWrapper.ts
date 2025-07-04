@@ -137,7 +137,7 @@ export class OnvifDeviceWrapper extends EventEmitter {
           gid: stats.gid,
           size: stats.size
         });
-      } catch (statError) {
+      } catch (statError: any) {
         Logger.error(`Trigger file check failed:`, {
           error: statError.message,
           code: statError.code
@@ -165,7 +165,7 @@ export class OnvifDeviceWrapper extends EventEmitter {
           lastLine,
           matchesWritten: lastLine === triggerLine.trim()
         });
-      } catch (readError) {
+      } catch (readError: any) {
         Logger.warn(`Could not verify trigger write:`, {
           error: readError.message
         });
@@ -230,7 +230,7 @@ export class OnvifDeviceWrapper extends EventEmitter {
       try {
         parsedMessage = JSON.parse(message);
         Logger.debug(`Successfully parsed message string for device ${this.deviceId}`);
-      } catch (e) {
+      } catch (e: any) {
         Logger.error(`Failed to parse message string for device ${this.deviceId}:`, {
           error: e instanceof Error ? e.message : String(e),
           message: message.substring(0, 200) // Log first 200 chars of message
@@ -483,4 +483,4 @@ export class OnvifDeviceWrapper extends EventEmitter {
       password: this.password
     };
   }
-} 
+}

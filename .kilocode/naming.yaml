@@ -1,0 +1,15 @@
+file_folder_naming:
+  - src/routes: Contains route registration and API endpoint definitions.
+  - src/controllers: Contains business logic for each route group (DiscoveryController, PTZController, etc.).
+  - src/services: Contains ONVIF protocol handlers, event logic, and device wrappers.
+  - src/models: Sequelize models for persistent storage.
+  - src/utils: Utility modules for ONVIF, logging, and topic parsing.
+variable_class_naming:
+  - Classes use PascalCase (e.g., DiscoveryController, CameraEventService).
+  - Variables and functions use camelCase (e.g., getDeviceKey, startUdpDiscovery).
+  - Constants use UPPER_SNAKE_CASE (e.g., MAX_RETRIES, DISCOVERY_TIMEOUT).
+route_naming:
+  - RESTful, resource-oriented (e.g., /devices/discover, /devices/:deviceId/ptz/status).
+device_naming_logic:
+  - Devices are keyed by a combination of address/URN and xaddr (see getDeviceKey, getDeviceKeyFromNodeOnvif).
+  - Device fields: address, xaddrs, types, scopes, manufacturer, model_name, ipv4, ipv4_path, ipv4_port. 

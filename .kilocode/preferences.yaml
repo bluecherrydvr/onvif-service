@@ -1,0 +1,14 @@
+design_choices:
+  - All async operations use async/await for clarity and error handling.
+  - RESTful API design for all endpoints.
+  - Modular code layout: routes, controllers, services, models, utils.
+  - Device discovery uses both UDP multicast and node-onvif library for robustness.
+  - Event handling is separated into wrappers and handlers for maintainability.
+library_usage:
+  - express: HTTP server and routing
+  - sequelize: ORM for MySQL device/event storage
+  - node-onvif, @agsh/onvif: ONVIF protocol and device discovery
+  - dotenv: Environment variable management
+  - log4js: Logging
+  - uuid: Unique ID generation
+  - xml2js, soap: XML and SOAP parsing for ONVIF 

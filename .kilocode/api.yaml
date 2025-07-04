@@ -1,0 +1,53 @@
+routes:
+  - path: /devices/discover
+    method: GET
+    description: Scan the network for ONVIF devices. Returns a list of discovered devices with metadata.
+  - path: /devices/rtsp
+    method: POST
+    description: Extract RTSP URLs from a device using ONVIF credentials (xaddr, username, password).
+  - path: /devices/:deviceId/ptz/status
+    method: GET
+    description: Get PTZ status for a specific device.
+  - path: /devices/:deviceId/ptz/relative
+    method: POST
+    description: Perform a relative PTZ move.
+  - path: /devices/:deviceId/ptz/absolute
+    method: POST
+    description: Perform an absolute PTZ move.
+  - path: /devices/:deviceId/ptz/continuous
+    method: POST
+    description: Perform a continuous PTZ move.
+  - path: /devices/:deviceId/ptz/stop
+    method: POST
+    description: Stop PTZ movement.
+  - path: /devices/:deviceId/ptz/capabilities
+    method: GET
+    description: Get PTZ capabilities for a device.
+  - path: /devices/:deviceId/ptz/presets
+    method: GET
+    description: List PTZ presets for a device.
+  - path: /devices/:deviceId/ptz/presets/goto
+    method: POST
+    description: Go to a PTZ preset.
+  - path: /devices/:deviceId/ptz/presets/set
+    method: POST
+    description: Set a PTZ preset.
+  - path: /devices/:deviceId/ptz/presets/remove
+    method: POST
+    description: Remove a PTZ preset.
+  - path: /devices/:deviceId/ptz/home/goto
+    method: POST
+    description: Go to the PTZ home position.
+  - path: /devices/:deviceId/ptz/home/set
+    method: POST
+    description: Set the PTZ home position.
+  - path: /devices/:deviceId/ptz/nodes
+    method: GET
+    description: List PTZ nodes for a device.
+rest_patterns:
+  - All endpoints use RESTful naming and HTTP methods (GET for retrieval, POST for actions/commands).
+  - Device-specific actions use /devices/:deviceId/ for scoping.
+  - Event-related routes are mounted from eventRoutes (see EventRoutes.ts for details).
+naming_conventions:
+  - Plural nouns for resource collections (e.g., /devices)
+  - Action or subresource as suffix (e.g., /ptz/status, /ptz/relative) 
