@@ -17,3 +17,12 @@ try {
   Server.Logs.fatal('Failed to initialize or start the server:', error);
   process.exit(1);
 }
+
+// Prevent process from crashing on uncaught exceptions or unhandled rejections
+process.on('uncaughtException', (err) => {
+  console.error('Uncaught Exception:', err);
+});
+
+process.on('unhandledRejection', (reason, promise) => {
+  console.error('Unhandled Rejection at:', promise, 'reason:', reason);
+});

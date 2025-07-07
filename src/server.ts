@@ -43,7 +43,12 @@ export class Server {
     );
 
     // Setup middleware
-    this.App.use(cors());
+    this.App.use(cors({
+      origin: 'https://192.168.87.144:7001',
+      credentials: true,
+      methods: ['GET', 'HEAD', 'PUT', 'PATCH', 'POST', 'DELETE', 'OPTIONS'],
+      allowedHeaders: ['Content-Type', 'Authorization']
+    }));
     this.App.use(json());
   }
 

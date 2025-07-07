@@ -1,7 +1,7 @@
 import { Express } from 'express';
 import { DiscoveryController } from '../controllers/DiscoveryController';
 import { PTZController } from '../controllers/PTZController';
-import { getDeviceRtspUrls } from '../services/onvif/RtspService';
+import { getRTSPUrls } from '../services/onvif/getRTSPurls';
 import eventRoutes from './controllers/Events/EventRoutes'; // ✅ default import
 import { Logger } from '../utils/Logger';
 
@@ -14,12 +14,17 @@ export function registerRoutes(app: Express) {
   // RTSP URL extraction
   app.post('/devices/rtsp', async (req, res) => {
     Logger.info('RTSP URL extraction request received');
+    Logger.info('Incoming RTSP extraction request body:', JSON.stringify(req.body));
     try {
-      const urls = await getDeviceRtspUrls(req.body.xaddr, req.body.username, req.body.password);
+      const urlObj = new URL(req.body.xaddr);
+      const urls = await getRTSPUrls(urlObj.hostname, urlObj.port ? parseInt(urlObj.port) : 80, req.body.username, req.body.password);
       Logger.info(`RTSP URLs extracted successfully: ${JSON.stringify(urls)}`);
       res.json(urls);
     } catch (error: any) {
       Logger.error('Failed to extract RTSP URLs:', error);
+      if (error && error.response && error.response.data) {
+        Logger.error('Raw ONVIF response:', error.response.data);
+      }
       res.status(500).json({ error: error.message });
     }
   });

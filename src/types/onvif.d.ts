@@ -19,6 +19,7 @@ declare module 'onvif' {
     password: string;
     timeout?: number;
     preserveAddress?: boolean;
+    useWSSecurity?: boolean;
   }
 
   export interface EventProperties {

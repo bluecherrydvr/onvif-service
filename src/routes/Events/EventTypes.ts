@@ -6,6 +6,9 @@ import { Server } from '../../server';
 import { Cam, EventProperties } from 'onvif';
 import { Logger } from '../../utils/Logger';
 import { SUPPORTED_EVENT_TYPES } from '../../services/OnvifDeviceWrapper';
+import express from 'express';
+
+const router = express.Router();
 
 const EVENT_LABELS: Record<string, string> = {
   FaceDetect: 'Face Detection',
@@ -91,60 +94,63 @@ function extractTopics(result: EventProperties): string[] {
   return topics;
 }
 
-export async function getAvailableEventTypes(req: Request, res: Response): Promise<void> {
-  const { id } = req.params;
-  const { ip, port, username, password } = req.query;
-
-  if (!ip || !port || !username || !password) {
-    res.status(400).json({ error: 'Missing required parameters' });
-    return;
+// Helper to flatten ONVIF topicSet into array of {type, label, fullTopic}
+function flattenTopics(node: any, path: string = '', out: any[] = []) {
+  for (const key in node) {
+    if (key === '$' || key === 'messageDescription' || key === 'data' || key === 'source') continue;
+    const child = node[key];
+    const newPath = path ? `${path}/${key}` : key;
+    if (child && typeof child === 'object' && child.$ && child.$['wstop:topic']) {
+      // Map ONVIF topic to a friendly type/label
+      let type = key.toLowerCase();
+      let label = key.replace(/([A-Z])/g, ' $1').replace(/^./, s => s.toUpperCase()).replace('Alarm', ' Detection').trim();
+      if (type === 'motionalarm') label = 'Motion Detection';
+      if (type === 'vehicledetect') label = 'Vehicle Detection';
+      if (type === 'peopledetect' || type === 'persondetect') label = 'Person Detection';
+      out.push({ type, label, fullTopic: newPath });
+    }
+    if (typeof child === 'object') {
+      flattenTopics(child, newPath, out);
+    }
   }
-
-  const cam = new Cam({
-    hostname: ip as string,
-    port: parseInt(port as string, 10),
-    username: username as string,
-    password: password as string,
-    timeout: 10000
-  });
-
-  try {
-    await new Promise<void>((resolve, reject) => {
-      cam.connect((err) => {
-        if (err) {
-          Logger.error(`Failed to connect to camera ${id}: ${err.message}`);
-          reject(err);
-        } else {
-          resolve();
-        }
-      });
-    });
-
-    // Get available event types
-    const eventTypes = await new Promise<string[]>((resolve, reject) => {
-      cam.getEventProperties((error, result) => {
-        if (error) {
-          Logger.error(`Failed to get event properties for camera ${id}: ${error.message}`);
-          reject(error);
-          return;
-        }
-
-        try {
-          const topics = extractTopics(result);
-          resolve(topics);
-        } catch (parseError) {
-          Logger.error(`Failed to parse event properties for camera ${id}: ${parseError instanceof Error ? parseError.message : String(parseError)}`);
-          reject(parseError);
-        }
-      });
-    });
-
-    res.json({ eventTypes });
-  } catch (error) {
-    const errorMessage = error instanceof Error ? error.message : 'Unknown error';
-    res.status(500).json({ error: errorMessage });
-  }
+  return out;
 }
+
+// GET /devices/:id/events/types?ip=...&port=...&username=...&password=...
+router.get('/devices/:id/events/types', async (req, res) => {
+  const { ip, port, username, password } = req.query;
+  const camPort = port ? parseInt(port as string, 10) : 80;
+  try {
+    Logger.debug(`Connecting to ONVIF camera at: http://${username}:${password}@${ip}:${camPort}`);
+    const cam = new Cam({
+      hostname: ip as string,
+      port: camPort,
+      username: username as string,
+      password: password as string,
+      timeout: 10000,
+      preserveAddress: true
+    }, (err: any) => {
+      if (err) {
+        Logger.error('ONVIF connection error:', err);
+        return res.status(500).json({ error: 'Failed to connect to camera', details: err.message || err });
+      }
+      cam.getEventProperties((err: any, result: any) => {
+        if (err || !result || !result.topicSet) {
+          Logger.error('Failed to get ONVIF event properties:', err);
+          return res.status(500).json({ error: 'Failed to get ONVIF event properties', details: err && err.message });
+        }
+        const supportedEvents = flattenTopics(result.topicSet);
+        Logger.debug(`Supported ONVIF event types: ${JSON.stringify(supportedEvents)}`);
+        return res.json({ supportedEvents });
+      });
+    });
+  } catch (e: any) {
+    Logger.error('Unexpected error in event type capability endpoint:', e);
+    return res.status(500).json({ error: 'Unexpected error', details: e.message });
+  }
+});
+
+export default router;
 
 // Bonus: Test live event subscription
 export async function testSubscribeToEvents(req: Request, res: Response): Promise<void> {

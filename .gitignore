@@ -43,3 +43,6 @@ yarn.lock
 # ignore package-lock.json
 package-lock.json
 
+.k*
+.c*
+
