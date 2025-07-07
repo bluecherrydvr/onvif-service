@@ -3,7 +3,7 @@
 import { Cam } from 'onvif';
 import { Logger } from '../utils/Logger';
 import { EventEmitter } from 'events';
-import { writeFileSync, appendFileSync } from 'fs';
+import * as net from 'net';
 
 export enum OnvifErrorType {
   CONNECTION_FAILED = 'CONNECTION_FAILED',
@@ -54,15 +54,21 @@ export class OnvifDeviceWrapper extends EventEmitter {
   private readonly MAX_CONSECUTIVE_FAILURES = 5;
   private readonly COOLDOWN_PERIOD = 30 * 60 * 1000; // 30 minutes
   private eventStates: Map<string, EventState> = new Map();
+  private allowedEventTypes: string[];
+  private subscriptionRenewTimer: NodeJS.Timeout | null = null;
+  private subscriptionLeaseSeconds: number = 60; // Default lease time (can be updated from camera response)
+  private subscription: any = null;
 
   constructor(
     private readonly ip: string,
     private readonly port: number,
     private readonly username: string,
     private readonly password: string,
-    private readonly deviceId: number
+    private readonly deviceId: number,
+    allowedEventTypes: string[] = SUPPORTED_EVENT_TYPES
   ) {
     super();
+    this.allowedEventTypes = allowedEventTypes;
     this.status = {
       lastError: '',
       errorType: OnvifErrorType.UNKNOWN,
@@ -116,79 +122,22 @@ export class OnvifDeviceWrapper extends EventEmitter {
   }
 
   private writeTriggerEvent(eventType: string, action: 'start' | 'stop'): void {
-    const triggerFile = '/tmp/bluecherry_trigger';
+    const triggerSocket = '/tmp/bluecherry_trigger';
+    const cameraId = this.deviceId;
+    const description = `${eventType}|${action}`;
+    const message = `${cameraId} ${description}\n`;
     
-    try {
-      // Log attempt to write
-      Logger.debug(`Attempting to write trigger event for device ${this.deviceId}`, {
-        eventType,
-        action,
-        triggerFile
+    // Connect to the UNIX socket and send the message
+    const client = net.createConnection({ path: triggerSocket }, () => {
+      client.write(message, () => {
+        client.end();
+        Logger.debug(`Sent trigger to UNIX socket: ${message.trim()}`);
       });
+    });
 
-      // Check if file exists and is writable
-      try {
-        const fs = require('fs');
-        const stats = fs.statSync(triggerFile);
-        Logger.debug(`Trigger file status:`, {
-          exists: true,
-          mode: stats.mode.toString(8),
-          uid: stats.uid,
-          gid: stats.gid,
-          size: stats.size
-        });
-      } catch (statError: any) {
-        Logger.error(`Trigger file check failed:`, {
-          error: statError.message,
-          code: statError.code
-        });
-      }
-
-      // Format: "camera_id|event_type|action"
-      const triggerLine = `${this.deviceId}|${eventType}|${action}\n`;
-      
-      // Log the exact content we're trying to write
-      Logger.debug(`Writing content to trigger file:`, {
-        content: triggerLine.trim(),
-        contentLength: triggerLine.length,
-        deviceId: this.deviceId
-      });
-
-      // Attempt to write to the file
-      appendFileSync(triggerFile, triggerLine);
-      
-      // Verify the write was successful by reading the last line
-      try {
-        const fs = require('fs');
-        const lastLine = fs.readFileSync(triggerFile).toString().split('\n').filter(Boolean).pop();
-        Logger.debug(`Last line in trigger file:`, {
-          lastLine,
-          matchesWritten: lastLine === triggerLine.trim()
-        });
-      } catch (readError: any) {
-        Logger.warn(`Could not verify trigger write:`, {
-          error: readError.message
-        });
-      }
-
-      Logger.info(`Successfully wrote trigger event`, {
-        deviceId: this.deviceId,
-        eventType,
-        action
-      });
-
-    } catch (error) {
-      Logger.error(`Failed to write trigger event:`, {
-        deviceId: this.deviceId,
-        eventType,
-        action,
-        error: error instanceof Error ? {
-          message: error.message,
-          code: (error as any).code,
-          stack: error.stack
-        } : error
-      });
-    }
+    client.on('error', (err) => {
+      Logger.error('Failed to send trigger to UNIX socket:', err);
+    });
   }
 
   private processEventState(topic: string, message: any): void {
@@ -200,10 +149,10 @@ export class OnvifDeviceWrapper extends EventEmitter {
     });
 
     // Only process events we're interested in
-    if (!SUPPORTED_EVENT_TYPES.includes(topic)) {
+    if (!this.allowedEventTypes.includes(topic)) {
       Logger.debug(`Skipping unsupported event topic for device ${this.deviceId}:`, {
         topic,
-        supportedTypes: SUPPORTED_EVENT_TYPES
+        allowedTypes: this.allowedEventTypes
       });
       return;
     }
@@ -379,6 +328,16 @@ export class OnvifDeviceWrapper extends EventEmitter {
 
         this.device = new Cam(config);
 
+        // Add robust error/disconnect listeners
+        this.device.on('error', (err: Error) => {
+          Logger.error(`ONVIF device error for device ${this.deviceId}:`, err);
+          setTimeout(() => this.startEventSubscription().catch(() => {}), 10000);
+        });
+        this.device.on('close', () => {
+          Logger.warn(`ONVIF device connection closed for device ${this.deviceId}`);
+          setTimeout(() => this.startEventSubscription().catch(() => {}), 10000);
+        });
+
         // Let the library handle the connection
         this.device.connect((err: Error | null) => {
           if (err) {
@@ -424,8 +383,16 @@ export class OnvifDeviceWrapper extends EventEmitter {
         
         const topic = parsedMessage.topic?._;
         if (topic) {
-          Logger.debug(`Processing event with topic for device ${this.deviceId}: ${topic}`);
-          this.processEventState(topic, parsedMessage);
+          // Only process allowed event types
+          const allowedLabels = ['Person', 'Animal', 'Vehicle'];
+          Logger.debug(`Allowed event labels: ${JSON.stringify(allowedLabels)}`);
+          const label = this.getEventLabel(topic);
+          if (allowedLabels.includes(label)) {
+            Logger.debug(`Processing allowed event (${label}) with topic for device ${this.deviceId}: ${topic}`);
+            this.processEventState(topic, parsedMessage);
+          } else {
+            Logger.debug(`Filtered out event with label ${label} for device ${this.deviceId}: ${topic}`);
+          }
         } else {
           Logger.debug(`Event received without topic for device ${this.deviceId}:`, {
             message: JSON.stringify(parsedMessage)
@@ -437,6 +404,9 @@ export class OnvifDeviceWrapper extends EventEmitter {
       this.device!.createPullPointSubscription((err: Error | null, subscription: any) => {
         if (err) {
           this.updateStatus(err);
+          // Try to re-subscribe after a delay
+          Logger.warn(`Subscription failed for device ${this.deviceId}, retrying in 10 seconds...`);
+          setTimeout(() => this.startEventSubscription().catch(() => {}), 10000);
           reject(err);
           return;
         }
@@ -445,11 +415,40 @@ export class OnvifDeviceWrapper extends EventEmitter {
         Logger.debug(`Subscription details for device ${this.deviceId}:`, {
           subscription: JSON.stringify(subscription)
         });
-        
+
+        // Store subscription and lease time
+        this.subscription = subscription;
+        // Try to get actual lease time from subscription (if available)
+        if (subscription && subscription.leaseTime) {
+          this.subscriptionLeaseSeconds = parseInt(subscription.leaseTime, 10) || 60;
+        }
+        // Schedule renewal before lease expires (at 80% of lease time)
+        this.scheduleSubscriptionRenewal();
+
         // The library will handle pulling messages automatically as long as there are event listeners
         resolve();
       });
     });
+  }
+
+  private scheduleSubscriptionRenewal(): void {
+    if (this.subscriptionRenewTimer) {
+      clearTimeout(this.subscriptionRenewTimer);
+    }
+    const renewMs = Math.floor(this.subscriptionLeaseSeconds * 0.8 * 1000);
+    Logger.info(`Scheduling ONVIF subscription renewal for device ${this.deviceId} in ${renewMs / 1000} seconds`);
+    this.subscriptionRenewTimer = setTimeout(() => {
+      this.renewEventSubscription().catch((err) => {
+        Logger.error(`Failed to renew ONVIF subscription for device ${this.deviceId}:`, err);
+        // Try to re-subscribe if renewal fails
+        this.startEventSubscription().catch(() => {});
+      });
+    }, renewMs);
+  }
+
+  private async renewEventSubscription(): Promise<void> {
+    Logger.info(`Renewing ONVIF event subscription for device ${this.deviceId} (by re-subscribing)`);
+    await this.startEventSubscription();
   }
 
   public cleanup(): void {
@@ -466,6 +465,11 @@ export class OnvifDeviceWrapper extends EventEmitter {
       
       this.device = null;
     }
+    if (this.subscriptionRenewTimer) {
+      clearTimeout(this.subscriptionRenewTimer);
+      this.subscriptionRenewTimer = null;
+    }
+    this.subscription = null;
   }
 
   /**

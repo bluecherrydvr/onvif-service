@@ -3,8 +3,8 @@ import { seenEventTopics, extractTypeFromTopic, getLabelFromTopic } from '../uti
 import { Server } from '../server';
 import { Logger } from '../utils/Logger';
 import axios from 'axios';
-import * as fs from 'fs';
 import * as path from 'path';
+import { Models } from '../models/Models';
 
 // Error types for better categorization
 export enum OnvifErrorType {
@@ -172,6 +172,11 @@ function updateDeviceStatus(deviceId: number, error: Error, errorType: OnvifErro
 function processEventMessage(deviceId: number, message: OnvifEventMessage): void {
   const { topic, type, label, data } = message;
   
+  // For debugging: track all topics seen, not just supported ones
+  if (topic) {
+    seenEventTopics.add(topic);
+  }
+  
   // Log all events for debugging
   Logger.debug(`Processing event for device ${deviceId}:`, {
     topic,
@@ -189,17 +194,6 @@ function processEventMessage(deviceId: number, message: OnvifEventMessage): void
       timestamp: data.timestamp,
       state: data.state
     });
-
-    // Write to the bluecherry_trigger file
-    try {
-      const triggerPath = '/tmp/bluecherry_trigger';
-      const triggerMessage = `${deviceId}|${label}|${data.eventType}\n`;
-      
-      fs.appendFileSync(triggerPath, triggerMessage);
-      Logger.debug(`Wrote to trigger file: ${triggerMessage.trim()}`);
-    } catch (error) {
-      Logger.error(`Failed to write to trigger file for device ${deviceId}:`, error);
-    }
 
     // TODO: Send event to Bluecherry API
     // This is where you would implement the API call to notify Bluecherry
@@ -231,8 +225,14 @@ export async function subscribeToEvents(
       existingWrapper.cleanup();
     }
 
-    // Create new wrapper
-    const wrapper = new OnvifDeviceWrapper(ip, port, username, password, deviceId);
+    // Query allowed event types for this device
+    const eventTypeRows = await Models.DeviceEventTypes.findAll({
+      where: { device_id: deviceId }
+    });
+    const allowedEventTypes = eventTypeRows.map(row => String(row.get('event_type')));
+
+    // Create new wrapper with allowed event types
+    const wrapper = new OnvifDeviceWrapper(ip, port, username, password, deviceId, allowedEventTypes);
     deviceWrappers.set(deviceId, wrapper);
 
     // Set up event handlers
